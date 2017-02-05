@@ -40,21 +40,23 @@ class MysqlDump extends Command
         $cloudDisk = config('backup.mysql.cloud-storage.disk');
         $cloudPath = config('backup.mysql.cloud-storage.path');
         $keepLocal = config('backup.mysql.cloud-storage.keep-local');
+        $extension = config('backup.mysql.compress')?'sql.gz':'sql';
+        $compress = config('backup.mysql.compress')?'| gzip':'';
 
         $filename = $database.'_'.empty(trim($this->argument('filename'))) ? $database.'_'.\Carbon\Carbon::now()->format('YmdHis') : trim($this->argument('filename'));
 
-        $dumpCommand = "mysqldump -e -f -h $host -u $username -p$password $database > $backupPath$filename.sql";
+        $dumpCommand = "mysqldump -e -f -h $host -u $username -p$password $database $compress > $backupPath$filename.$extension";
 
         exec($dumpCommand);
 
         $this->info('Mysql backup completed!');
 
         if ($cloudStorage) {
-            $fileContents = file_get_contents("$backupPath$filename.sql");
-            Storage::disk($cloudDisk)->put("$cloudPath$filename.sql", $fileContents);
+            $fileContents = file_get_contents("$backupPath$filename.$extension");
+            Storage::disk($cloudDisk)->put("$cloudPath$filename.$extension", $fileContents);
 
             if (!$keepLocal) {
-                $rmCommand = "rm $backupPath$filename.sql";
+                $rmCommand = "rm $backupPath$filename.$extension";
                 exec($rmCommand);
             }
 
